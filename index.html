@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <title>EchoApp | Demo</title>
+  <meta name="description" content="" />
+  <meta name="author" content="" />
+
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- CSS concatenated and minified via ant build script-->
+  <link href="styles/styles.css" type="text/css" rel="stylesheet"/>
+  <!-- end CSS-->
+
+</head>
+
+<body>
+
+  <div id="container">
+    <header>
+		EchoApp Demo
+    </header>
+    <div id="content">
+    	<div class="todo" id="Todo1">
+    		<h4>Grocery List</h4>
+			<ul id="todolist1" data-echo-bind="foreach: items, click : removeItem">
+				<li data-echo-bind="mouseover : closeButton, mouseout : closeButton">
+					<p data-echo-bind="text : title">Todo title</p>
+					<a class="close" style="display:none" href=# data-echo-bind="mouseover: highlightClose, mouseout : highlightClose"></a>
+				</li>
+			</ul>
+			<br />
+			<form data-echo-bind="submit: updateList" action='#' method="post">
+				<input type="text" placeholder="Add grocery item" name="title" data-echo-bind="blur: function(el){ el.style.cssText='border:1px solid green'; }" />
+				<button type="submit">Add</button>
+			</form>
+    	</div>
+    	<div class="todo" id="Todo2">
+    		<h4>Chores for the day!</h4>
+			<ul id="todolist2" data-echo-bind="foreach: items, init: render, click : removeItem">
+				<li data-echo-bind="mouseover : closeButton, mouseout : closeButton">
+					<p data-echo-bind="text : title" style="font-weight:bold"></p>
+					<small data-echo-bind="text : desc">This todo has no description</small>
+					<a class="close" style="display:none" href=# data-echo-bind="mouseover: highlightClose, mouseout : highlightClose"></a>
+				</li>
+			</ul>
+			<br />
+			<form data-echo-bind="submit: updateList" action='#' method="post">
+				<input placeholder="Title of the todo" type="text" name="title"/>
+				<input type="text" placeholder="A brief description of the todo..." name="desc"/>
+				<button type="submit">Add Todo</button>
+			</form>
+    	</div>
+    </div>
+    
+    <footer>
+    </footer>
+  </div> <!--! end of #container -->
+
+
+  <!-- JavaScript at the bottom for fast page loading -->
+  <!--<script src="js/libs/jquery.js"></script>-->
+
+  <script defer src="js/libs/echoQuery.js"></script>
+  <script defer src="js/libs/echo.js"></script>
+  <script defer src="js/script.js"></script>
+  <!-- end scripts-->
+  
+</body>
+</html>
