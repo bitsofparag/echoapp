@@ -39,7 +39,7 @@
 				<input type="text" placeholder="Add grocery item" name="title" data-echo-bind="blur: function(el){ el.style.cssText='border:1px solid green'; }" />
 				<button type="submit">Add</button>
 			</form>
-			<p  class="numItems">Number of grocery items: <span data-echo-bind="update : $parent.items.length">0</span></p>
+			<p class="numItems">Number of grocery items: <span data-echo-bind="text : $parent.items.length">0</span></p>
     	</section>
     	
     	
@@ -66,9 +66,17 @@
     	
     	<section class="modelReport">
     		<div class="modelReportContainer">
-    			<h3>Last updated model: <span style="color:rgb(85,102,135)" data-echo-bind="update : $parent.type">...</span></h3>
+    			<h3>Last updated model: <span style="color:rgb(85,102,135)" data-echo-bind="text : $parent.type">...</span></h3>
     			<textarea readonly data-echo-bind="value : JSON.stringify($parent)"></textarea>
     		</div>
+    	</section>
+    	
+    	<hr />
+    	
+    	<section id="Dummy">
+    		<p data-echo-bind="text : firstName"></p>
+    		<p data-echo-bind="text : age"></p>
+    		<p data-echo-bind="text : hobbies"></p>
     	</section>
     	
     	

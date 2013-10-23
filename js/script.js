@@ -81,5 +81,12 @@
 	// on DOM ready
 	Echo.bind(new TodoList('Groceries'), '#Todo1, .modelReport')
 	Echo.bind(new TodoList('Todos'), '#Todo2, .modelReport')
+	
+	window.Person = {
+		"firstName" : "Parag",
+		"age" : "30",
+		"hobbies" : Echo.observable("painting, guitaring")
+	}
+	Echo.bind(window.Person, '#Dummy')
 }()
 

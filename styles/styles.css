@@ -60,3 +60,7 @@ a.close:before {
 hr{
 	float:left;width: 100%;border-top:1px dashed rgb(40,40,40)
 }
+
+#Dummy{
+	float:left;width: 100%;
+}

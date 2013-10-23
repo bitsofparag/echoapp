@@ -277,11 +277,11 @@
 			var res = []
 			this.each(function(node, i, echoQueryObj){
 				var element = this, parent = element.parentNode
-				while(!parent[_matches](sel) && parent !== document.body) {
+				while(_matches in parent && !parent[_matches](sel)) {
 				    //display, log or do what you want with element
 				    parent = parent.parentNode;
 				}
-				res[i] = parent
+				if(parent !== document) res[i] = parent
 			})
 			return $(res)
 		},

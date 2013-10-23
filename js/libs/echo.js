@@ -61,13 +61,15 @@
 	var _ecItemTagId = 'ec_item_id'
 	var _ecDataId = 'data-echo-id'
 	var _ecDataIdSel = '[' + _ecDataId + ']'
+	var _ecObsVal = '__ecVal__'
+	var _ecTmplNode = '__ecTpl__'
 	var _regex = {
 		each : /foreach\s*:/
 	}
 	window._modelDb = {}
 	var _moduleDb = {}
 	var _docIsReady = false
-	var _echoProps = ['template', 'foreach', 'if', 'update', 'init', 'bornready', 'value']
+	var _echoProps = ['template', 'foreach', 'if', 'update', 'init', 'bornready', 'value', 'text']
 	var _domProps = ['click', 'submit', 'blur', 'mouseover', 'mouseout']
 	
 	function _isTemplateNode(node){
@@ -110,7 +112,7 @@
 	}
 	
 	function _getModelId(item){
-		return item[_ecKey].id
+		return _ecKey in item? item[_ecKey].id : null
 	}
 	
 	function _getModel(item){
@@ -234,25 +236,23 @@
 	 }
 	 
 	 
+	 //TODO refactor
 	 // called on the node which is listening to "Echo:update" or "<Model>:update" events
-	 function _viewUpdateDOMEchoEvent(e){
-	 	var s = _getEchoEventData(e)
-	 	var eattr = _getEchoAttrs(this)
-	 	var $parent = _getModel(s.itemParent)
-	 	var $data = s.item
-	 	var res = new Function('$data', '$parent', 'return ' + eattr.update)($data, $parent)
-	 	this.innerHTML = res
-	 }
-	
 	function _viewValueDOMEchoEvent(e){
 		var s = _getEchoEventData(e)
 	 	var eattr = _getEchoAttrs(this)
 	 	var $parent = _getModel(s.itemParent)
 	 	var $data = s.item
-	 	var res = new Function('$data', '$parent', 'return ' + eattr.value)($data, $parent)
-	 	this.value = res
+	 	this.value = _getActualValueFromObject(eattr.value, $data, $parent)
 	}
-	
+	function _viewUpdateDOMEchoEvent(e){
+		var s = _getEchoEventData(e)
+	 	var eattr = _getEchoAttrs(this)
+	 	var $parent = _getModel(s.itemParent)
+	 	var $data = s.item
+	 	this['inner' + ('innerText' in this? 'Text' : 'HTML')] = _getActualValueFromObject(eattr.text, $data, $parent)
+	}
+	//TODO refactor
 	
 	
 	
@@ -281,14 +281,24 @@
 		return res
 	}
 	
+	function _getActualValueFromObject(echoAttrVal, $data, $parent){
+		if($.isPlainObject(echoAttrVal) && ('get' in echoAttrVal)) echoAttrVal = echoAttrVal.get()
+		var res
+		try{
+			res = new Function('$data', '$parent', 'return ' + echoAttrVal)($data, $parent)
+		} catch(e){
+			res = echoAttrVal
+		}
+	 	return res
+	}
+	
 	function _isInsideATemplate(node){
-		var found = false, parent
-		do{
-			parent = $(node).closest(_ecSel)[0]
-			if(_regex.each.test(parent.getAttribute(_ecAttr))) found = true
-			node = parent
-		} while(!found && node !== document.body)
-		return found
+		var $parent = $(node).closest(_ecSel), parent = $parent[0], nodeIsInATemplate = false
+		while($parent.length > 0){
+			if(_ecTmplNode in parent || _regex.each.test($parent[0].getAttribute(_ecAttr))) { nodeIsInATemplate = true; parent[_ecTmplNode] = true; break; }
+			$parent = $parent.closest(_ecSel)
+		}
+		return nodeIsInATemplate
 	}
 	
 	
@@ -329,17 +339,25 @@
 	}
 	
 	
-	function _updateDOMEcho(type, node, echoAttrVal, context){
+	function _updateDOMOnInitEcho(type, node, echoAttrVal, context){
+	 	var $parent = _getModel(context)
+	 	var $data = context
+	 	var res
 		switch(type){
 			case 'value':
-				$(node).on('Echo:update', _viewValueDOMEchoEvent)
+				if(res = _getActualValueFromObject(echoAttrVal, $data, $parent)) node.value = res
 				break;
-			case 'update':
-			 	$(node).on('Echo:update', _viewUpdateDOMEchoEvent)
+			case 'text':
+			 	if(res = _getActualValueFromObject(echoAttrVal, $data, $parent)) node.innerHTML = res
 			 	break;
 			 default:
 			 	break;
 		}
+	}
+	
+	function _tagNodeOn(node){
+		var tmp = node.getAttribute(_ecDataId) || ''
+		node.setAttribute(_ecDataId, tmp + (tmp.length > 0? '|' : '') + _getModelId(this))
 	}
 	
 	function _subscribeEventsEcho(node, echoAttrs, context){
@@ -348,15 +366,22 @@
 		$.each(echoAttrs, function(value, key){
 			value = _getBoundAttrValue(value, context)
 			if(_echoProps.indexOf(key) > -1){
-				var tmp = node.getAttribute(_ecDataId) || ''
-				node.setAttribute(_ecDataId, tmp + (tmp.length > 0? '|' : '') + _getModelId(context))
-				
 				switch(key){
+					case 'text':
+						if(!_isInsideATemplate(node)){
+							_tagNodeOn.call($data, node)
+							_updateDOMOnInitEcho('text', node, value, $data)
+							$(node).on('Echo:update', _viewUpdateDOMEchoEvent)
+						}
+						break;
 					case 'value':
-						_updateDOMEcho('value', node, value, $data)
+						if(!_isInsideATemplate(node)){
+							_tagNodeOn.call($data, node)
+							_updateDOMOnInitEcho('value', node, value, $data)
+							$(node).on('Echo:update', _viewValueDOMEchoEvent)
+						}
 						break;
 					case 'update' :
-						_updateDOMEcho('update', node, value, $data)
 						break;
 					case 'bornReady' : break;
 					case 'init' :
@@ -364,6 +389,8 @@
 							value(node) 
 						break;
 					case 'foreach' :
+						_tagNodeOn.call($data, node)
+						node[_ecTmplNode] = true
 						_templateIteratorEcho(node, value, context)
 						_bindEventsEcho($(_ecSel, node), context)
 						templateReady = true
@@ -470,6 +497,20 @@
 		
 		observableArray : function(array, context){
 			return _EchoArray(array, context || Echo.observableArray.caller)
+		},
+		
+		observable : function(val){
+			var ret = {
+				get : function(){
+					return this[_ecObsVal]
+				},
+				set: function(v){
+					this[_ecObsVal] = v
+					_publish(_getModelId(this) + ':update', ['set', v, null, this])
+				}
+			}
+			ret[_ecObsVal] = val
+			return ret
 		},
 		
 		append : function(parentNode, childNodes, callback){
