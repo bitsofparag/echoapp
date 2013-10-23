@@ -23,7 +23,10 @@
 		EchoApp Demo
     </header>
     <div id="content">
-    	<div class="todo" id="Todo1">
+    	
+    	<!--  ############################################################################################ -->
+    	<!-- First todo list - First Echo model binding -->
+    	<section class="todo" id="Todo1">
     		<h4>Grocery List</h4>
 			<ul id="todolist1" data-echo-bind="foreach: items, click : removeItem">
 				<li data-echo-bind="mouseover : closeButton, mouseout : closeButton">
@@ -36,11 +39,13 @@
 				<input type="text" placeholder="Add grocery item" name="title" data-echo-bind="blur: function(el){ el.style.cssText='border:1px solid green'; }" />
 				<button type="submit">Add</button>
 			</form>
-			<div class="numItems">
-				<p>Number of grocery items: <span data-echo-bind="update : $parent.items.length">0</span></p>
-			</div>
-    	</div>
-    	<div class="todo" id="Todo2">
+			<p  class="numItems">Number of grocery items: <span data-echo-bind="update : $parent.items.length">0</span></p>
+    	</section>
+    	
+    	
+    	<!--  ############################################################################################ -->
+    	<!-- Second todo list - Second Echo model binding --> 
+    	<section class="todo" id="Todo2">
     		<h4>Chores for the day!</h4>
 			<ul id="todolist2" data-echo-bind="foreach: items, init: render, click : removeItem">
 				<li data-echo-bind="mouseover : closeButton, mouseout : closeButton">
@@ -55,8 +60,19 @@
 				<input type="text" placeholder="A brief description of the todo..." name="desc"/>
 				<button type="submit">Add Todo</button>
 			</form>
-    	</div>
-    </div>
+    	</section>
+    	
+    	<hr />
+    	
+    	<section class="modelReport">
+    		<div class="modelReportContainer">
+    			<h3>Last updated model: <span style="color:rgb(85,102,135)" data-echo-bind="update : $parent.type">...</span></h3>
+    			<textarea readonly data-echo-bind="value : JSON.stringify($parent)"></textarea>
+    		</div>
+    	</section>
+    	
+    	
+    </div> <!-- End of content container -->
     
     <footer>
     </footer>

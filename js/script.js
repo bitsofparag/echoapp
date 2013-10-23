@@ -79,7 +79,7 @@
 		return TodoList
 	})*/
 	// on DOM ready
-	Echo.bind(new TodoList('Groceries'), '#Todo1')
-	Echo.bind(new TodoList('Todos'), '#Todo2')
+	Echo.bind(new TodoList('Groceries'), '#Todo1, .modelReport')
+	Echo.bind(new TodoList('Todos'), '#Todo2, .modelReport')
 }()
 

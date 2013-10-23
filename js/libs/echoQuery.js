@@ -192,7 +192,7 @@
 			var self = this
 			//self.sel = sel || 'div'
 			self.parent = context || document
-			var nodes = frag? _slice.call(frag.children) : _typeof(sel) === STRING? ((sel[0] === '#')? [document.getElementById(sel.replace('#', ''))] : _slice.call(self.parent.querySelectorAll(sel))) : 'nodeName' in sel?  [sel] : _slice.call(sel)
+			var nodes = frag? _slice.call(frag.children) : _typeof(sel) === STRING? _slice.call(self.parent.querySelectorAll(sel)) : 'nodeName' in sel?  [sel] : _slice.call(sel)
 			nodes.forEach(function(node, idx){
 				self[idx] = node
 			})

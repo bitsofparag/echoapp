@@ -57,16 +57,17 @@
 	// ~~~~~~~~~~~~~ Echo core ~~~~~~~~~~~~~~~~~~~~~
 	var _ecAttr = 'data-echo-bind'
 	var _ecSel = '[' + _ecAttr + ']'
-	var _ecpropid = '__ecid'
-	var _ecpropsel = '__ecsels'
+	var _ecKey = '__ec__'
 	var _ecItemTagId = 'ec_item_id'
+	var _ecDataId = 'data-echo-id'
+	var _ecDataIdSel = '[' + _ecDataId + ']'
 	var _regex = {
 		each : /foreach\s*:/
 	}
-	var _modelDb = {}
+	window._modelDb = {}
 	var _moduleDb = {}
 	var _docIsReady = false
-	var _echoProps = ['template', 'foreach', 'if', 'update', 'init', 'bornready']
+	var _echoProps = ['template', 'foreach', 'if', 'update', 'init', 'bornready', 'value']
 	var _domProps = ['click', 'submit', 'blur', 'mouseover', 'mouseout']
 	
 	function _isTemplateNode(node){
@@ -79,6 +80,29 @@
 		return 'nodeName' in obj
 	}
 	
+	function _setModelEchoProperties(obj, val){
+		if('defineProperty' in Object){
+			Object.defineProperty(obj, _ecKey, {
+				enumerable: false,
+				writable: false,
+				value : {}
+			})
+			Object.defineProperties(obj[_ecKey], {
+				"id" : {
+					value : val.id,
+					writable : false
+				},
+				"sels" : {
+					value : val.sels,
+					writable : false
+				}
+			})
+		}
+		else
+			obj[_ecKey] = val
+		return obj
+	}
+	
 	function _getDeps(/* Array*/ deps){
 		return deps.map(function(depName){
 			return _moduleDb[depName]
@@ -86,19 +110,27 @@
 	}
 	
 	function _getModelId(item){
-		return item[_ecpropid]
+		return item[_ecKey].id
 	}
 	
 	function _getModel(item){
 		return _modelDb[_getModelId(item)]	
 	}
 	
+	function _getModelListeners(modelInst){
+		return modelInst[_ecKey].sels
+	}
+	
 	function _updateSubscribeTemplate(){
 		var args = _slice.call(arguments),
 			observableObj = args[args.length - 1],  // Array or Object that was converted to an observable
 			modelInst = _getModel(observableObj) // get active instance of the model
-		$(modelInst[_ecpropsel]).each(function(){
-			$('[data-echo-id="' + _getModelId(observableObj) + '"]', this).trigger('Echo:update', args)
+		$(_getModelListeners(modelInst)).each(function(){
+			var modelId = _getModelId(observableObj)
+			$(_ecDataIdSel, this).each(function(){
+				if(this.getAttribute(_ecDataId).indexOf(modelId) > -1)
+					$(this).trigger('Echo:update', args)
+			})
 		})
 		
 	}
@@ -110,13 +142,12 @@
 			_modelDb[np] = []
 			_subscribe(np + ':update', _updateSubscribeTemplate)
 		}
-		modelInst[_ecpropid] = np
-		modelInst[_ecpropsel] = sels
-		_modelDb[np] = modelInst
+		
+		_modelDb[np] = _setModelEchoProperties(modelInst, {id : np, sels : sels})
 		
 		for(var prop in modelInst){
 			if(modelInst[prop] instanceof _EchoArray)
-				modelInst[prop][_ecpropid] = modelInst[_ecpropid]
+				_setModelEchoProperties(modelInst[prop], {id : np})
 		}
 		
 		return modelInst
@@ -163,7 +194,6 @@
 	
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	function _getTemplateFrag(template, item, itemIdx, itemParent){
-		var assocModel = _getModel(item)
 		var $frag = $('<div />'), fragDiv = $frag[0]
 		var tag = itemIdx
 		
@@ -214,7 +244,14 @@
 	 	this.innerHTML = res
 	 }
 	
-	
+	function _viewValueDOMEchoEvent(e){
+		var s = _getEchoEventData(e)
+	 	var eattr = _getEchoAttrs(this)
+	 	var $parent = _getModel(s.itemParent)
+	 	var $data = s.item
+	 	var res = new Function('$data', '$parent', 'return ' + eattr.value)($data, $parent)
+	 	this.value = res
+	}
 	
 	
 	
@@ -240,7 +277,7 @@
 			res = $.proxy(value, context)
 		else if(typeof value === 'string' && $.isFunction(context[value]))
 			res = $.proxy(context[value], context)
-		else res = context[value]
+		else res = value in context? context[value] : value
 		return res
 	}
 	
@@ -291,8 +328,18 @@
 		})
 	}
 	
-	function _updateDOMEcho(node, echoAttrVal, context){
-		$(node).on('Echo:update', _viewUpdateDOMEchoEvent)
+	
+	function _updateDOMEcho(type, node, echoAttrVal, context){
+		switch(type){
+			case 'value':
+				$(node).on('Echo:update', _viewValueDOMEchoEvent)
+				break;
+			case 'update':
+			 	$(node).on('Echo:update', _viewUpdateDOMEchoEvent)
+			 	break;
+			 default:
+			 	break;
+		}
 	}
 	
 	function _subscribeEventsEcho(node, echoAttrs, context){
@@ -301,10 +348,15 @@
 		$.each(echoAttrs, function(value, key){
 			value = _getBoundAttrValue(value, context)
 			if(_echoProps.indexOf(key) > -1){
-				node.setAttribute('data-echo-id', _getModelId(context))
+				var tmp = node.getAttribute(_ecDataId) || ''
+				node.setAttribute(_ecDataId, tmp + (tmp.length > 0? '|' : '') + _getModelId(context))
+				
 				switch(key){
+					case 'value':
+						_updateDOMEcho('value', node, value, $data)
+						break;
 					case 'update' :
-						_updateDOMEcho(node, value, $data)
+						_updateDOMEcho('update', node, value, $data)
 						break;
 					case 'bornReady' : break;
 					case 'init' :
@@ -367,7 +419,6 @@
 		
 		pop : function(){
 			var popped = Array.prototype.pop.call(this)
-			//this.length -= 1
 			_publish(_getModelId(this) + ':update', ['pop', null, this.length, this])
 			return this
 		},
