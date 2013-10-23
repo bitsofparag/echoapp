@@ -36,6 +36,9 @@
 				<input type="text" placeholder="Add grocery item" name="title" data-echo-bind="blur: function(el){ el.style.cssText='border:1px solid green'; }" />
 				<button type="submit">Add</button>
 			</form>
+			<div class="numItems">
+				<p>Number of grocery items: <span data-echo-bind="update : $parent.items.length">0</span></p>
+			</div>
     	</div>
     	<div class="todo" id="Todo2">
     		<h4>Chores for the day!</h4>

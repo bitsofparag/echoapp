@@ -16,7 +16,7 @@
 	/*	
 	pub/sub plugin
 	*/	
-	var _subscache = {}
+	window._subscache = {}
 	var _publish = function(/* String */topic, /* Array */args){
 		if(_subscache[topic])
 			$.each(_subscache[topic], function(subscription){
@@ -144,6 +144,16 @@
 	}
 	
 	
+	function _getEchoEventData(e){
+		var data = e.data
+	 	return {
+	 		type : data[0],
+	 		item : data[1],
+	 		itemIdx : data[2],
+	 		itemParent : data[data.length - 1]
+	 	}
+	}
+	
 	
 	
 	
@@ -181,20 +191,27 @@
 	
 	// called on the node which is listening to "Echo:update" or "<Model>:update" events
 	function _viewUpdateTemplateEchoEvent(e){
-	 	var data = e.data
-	 	var type = data[0]
-	 		item = data[1], // one item or an array/object of items 
-	 		itemIdx = data[2], // Number - index of item or length of array of items 
-	 		itemParent = data[data.length - 1] // observable object
+	 	var s = _getEchoEventData(e)
 	 	var tmpl = $(this).data('template')
-	 	if(item){
-	 		Echo.append(this, Echo.getTemplateNodes(tmpl, item, itemIdx, itemParent), function(node, idxItem, parentItem){
+	 	if(s.item){
+	 		Echo.append(this, Echo.getTemplateNodes(tmpl, s.item, s.itemIdx, s.itemParent), function(node, idxItem, parentItem){
 	 			_traverseChildrenAndBind(node, _bindEventsEcho, _getModel(parentItem) || parentItem, Echo)
-	 		}, itemIdx, itemParent)
+	 		}, s.itemIdx, s.itemParent)
 	 	} else {
 	 		var parentNode = this
-	 		$('nodeType' in itemIdx? itemIdx : $(parentNode).children()[itemIdx]).remove()
+	 		$('nodeType' in s.itemIdx? s.itemIdx : $(parentNode).children()[s.itemIdx]).remove()
 	 	}
+	 }
+	 
+	 
+	 // called on the node which is listening to "Echo:update" or "<Model>:update" events
+	 function _viewUpdateDOMEchoEvent(e){
+	 	var s = _getEchoEventData(e)
+	 	var eattr = _getEchoAttrs(this)
+	 	var $parent = _getModel(s.itemParent)
+	 	var $data = s.item
+	 	var res = new Function('$data', '$parent', 'return ' + eattr.update)($data, $parent)
+	 	this.innerHTML = res
 	 }
 	
 	
@@ -274,14 +291,21 @@
 		})
 	}
 	
+	function _updateDOMEcho(node, echoAttrVal, context){
+		$(node).on('Echo:update', _viewUpdateDOMEchoEvent)
+	}
+	
 	function _subscribeEventsEcho(node, echoAttrs, context){
 		var self = Echo, templateReady = 'foreach' in echoAttrs? false : true
+		var $data = context
 		$.each(echoAttrs, function(value, key){
 			value = _getBoundAttrValue(value, context)
 			if(_echoProps.indexOf(key) > -1){
 				node.setAttribute('data-echo-id', _getModelId(context))
 				switch(key){
-					case 'update' : break;
+					case 'update' :
+						_updateDOMEcho(node, value, $data)
+						break;
 					case 'bornReady' : break;
 					case 'init' :
 						if(templateReady && _docIsReady)
@@ -303,12 +327,12 @@
 	 * @desc This loops through all 'data-echo-bind' nodes and captures and applies corresponding bindings on the echo observable object 
 	 */
 	function _bindEventsEcho(nodeToBind, modelObj){
-		var self = Echo, nodes = _isDomNode(nodeToBind)? [nodeToBind] : _slice.call(nodeToBind)
+		var self = Echo, nodes = _isDomNode(nodeToBind)? [nodeToBind] : _slice.call(nodeToBind), $data = modelObj
 		$.each(nodes, function(node, i){
 			// get all 'data-echo-bind' attributes on this node and capture and apply corresponding bindings in echo observable object
 			var echoAttrs = _getEchoAttrs(node)
-			_bindDomEventsEcho(node, echoAttrs, modelObj)
-			_subscribeEventsEcho(node, echoAttrs, modelObj)
+			_bindDomEventsEcho(node, echoAttrs, $data)
+			_subscribeEventsEcho(node, echoAttrs, $data)
 		})
 	}
 	
